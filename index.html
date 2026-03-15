@@ -420,7 +420,7 @@ function App() {
   return (
     <div style={S.root}>
       <style>{GLOBAL_CSS}</style>
-      {toast && <div key={toast.msg} style={{ ...S.toast, borderColor: toast.color, color: toast.color }}>{toast.msg}</div>}
+      {toast && <div key={toast.msg} className="safe-toast" style={{ ...S.toast, borderColor: toast.color, color: toast.color }}>{toast.msg}</div>}
 
       {confirmReset && (
         <div style={S.overlay} onClick={() => setConfirmReset(false)}>
@@ -448,7 +448,7 @@ function HomeView({ state, onStart, onHistory, onSettings, onReset }) {
   const last = state.history[0];
   const streakDays = getStreak(state.history);
   return (
-    <div style={S.page}>
+    <div className="safe-page" style={S.page}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
         <div>
           <div style={S.logo}>IRON<span style={{ color: "#22c55e" }}>LOG</span></div>
@@ -548,11 +548,7 @@ function WorkoutView({ dayKey, day, session, state, onToggle, onReps, onWeight, 
 
   return (
     <div style={{ ...S.page, paddingBottom: 110, paddingTop: 0 }}>
-      <div style={{
-        position: "sticky", top: 0, zIndex: 10,
-        background: "#09090b", paddingTop: 24, paddingBottom: 12,
-        marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16,
-      }}>
+      <div className="sticky-header">
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 6 }}>
           <button onClick={onBack} style={S.iconBtn}>←</button>
           <div style={{ flex: 1, fontSize: 28, fontWeight: 800, letterSpacing: 3, color: "#fff" }}>{day.label}</div>
@@ -722,7 +718,7 @@ function SettingsView({ state, onUpdate, onUpdateWeight, onBack }) {
   });
 
   return (
-    <div style={S.page}>
+    <div className="safe-page" style={S.page}>
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
         <button onClick={onBack} style={S.iconBtn}>←</button>
         <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: 3, color: "#fff" }}>SETTINGS</div>
@@ -780,7 +776,7 @@ function NumField({ label, value, hint, onChange, accent = "#22c55e" }) {
 // ── HISTORY ──────────────────────────────────────────────────────────────────
 function HistoryView({ history, onExport, onBack }) {
   return (
-    <div style={S.page}>
+    <div className="safe-page" style={S.page}>
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 26 }}>
         <button onClick={onBack} style={S.iconBtn}>←</button>
         <div style={{ flex: 1, fontSize: 28, fontWeight: 800, letterSpacing: 3, color: "#fff" }}>HISTORY</div>
@@ -856,6 +852,16 @@ const GLOBAL_CSS = `
   button { -webkit-tap-highlight-color: transparent; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  .safe-page { padding-top: calc(24px + env(safe-area-inset-top, 0px)); }
+  .sticky-header {
+    position: sticky; top: 0; z-index: 10;
+    background: #09090b;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    padding-bottom: 12px;
+    margin-left: -16px; margin-right: -16px;
+    padding-left: 16px; padding-right: 16px;
+  }
+  .safe-toast { top: calc(20px + env(safe-area-inset-top, 0px)) !important; }
 `;
 
 const S = {
@@ -879,8 +885,6 @@ const S = {
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-
-// Register service worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
