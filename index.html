@@ -14,9 +14,9 @@
     html, body, #root { margin: 0; padding: 0; height: 100%; background: #09090b; }
     body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <div id="root"></div>
@@ -32,7 +32,9 @@ const PROGRAM = {
     label: "Day A",
     muscles: "Chest · Back · Legs",
     exercises: [
-      { id: "bench_a", name: "Bench Press", sets: 4, reps: 10, weight: 60, step: 2.5 },
+      { slot: "bench_a", sets: 4, defaultAlt: 0, alts: [
+        { id: "bench_a", name: "Bench Press", reps: 10, weight: 60, step: 2.5 },
+      ]},
       {
         slot: "pull_a", sets: 4, defaultAlt: 0,
         alts: [
@@ -41,15 +43,21 @@ const PROGRAM = {
           { id: "pullup_a", name: "Pull-ups", reps: "max", weight: null, step: null },
         ],
       },
-      { id: "fly_a", name: "Pec Fly", sets: 4, reps: 12, weight: 60, step: 3.75, progressReps: 14 },
-      { id: "legpress_a", name: "Leg Press", sets: 4, reps: 15, weight: 52.5, step: 3.75 },
+      { slot: "fly_a", sets: 4, defaultAlt: 0, alts: [
+        { id: "fly_a", name: "Pec Fly", reps: 12, weight: 60, step: 3.75, progressReps: 14 },
+      ]},
+      { slot: "legpress_a", sets: 4, defaultAlt: 0, alts: [
+        { id: "legpress_a", name: "Leg Press", reps: 15, weight: 52.5, step: 3.75 },
+      ]},
     ],
   },
   B: {
     label: "Day B",
     muscles: "Chest · Back · Shoulders · Arms",
     exercises: [
-      { id: "bench_b", name: "Bench Press", sets: 4, reps: 10, weight: 60, step: 2.5 },
+      { slot: "bench_b", sets: 4, defaultAlt: 0, alts: [
+        { id: "bench_b", name: "Bench Press", reps: 10, weight: 60, step: 2.5 },
+      ]},
       {
         slot: "pull_b", sets: 4, defaultAlt: 1,
         alts: [
@@ -58,17 +66,27 @@ const PROGRAM = {
           { id: "hrow_b", name: "Compound Row", reps: 10, weight: 60, step: 10, progressReps: 12 },
         ],
       },
-      { id: "lateral_b", name: "Lateral Raise", sets: 4, reps: 15, weight: 20, step: 5, progressReps: 18 },
-      { id: "bicep_b", name: "Bicep Curl", sets: 4, reps: 8, weight: 12, step: 1 },
+      { slot: "lateral_b", sets: 4, defaultAlt: 0, alts: [
+        { id: "lateral_b", name: "Lateral Raise", reps: 15, weight: 32, step: 5, progressReps: 18 },
+      ]},
+      { slot: "bicep_b", sets: 4, defaultAlt: 0, alts: [
+        { id: "bicep_b", name: "Bicep Curl", reps: 8, weight: 12, step: 1 },
+      ]},
     ],
   },
   C: {
     label: "Day C",
     muscles: "Chest · Shoulders · Core · Back",
     exercises: [
-      { id: "bench_c", name: "Bench Press", sets: 4, reps: 10, weight: 60, step: 2.5 },
-      { id: "shpress_c", name: "Shoulder Press", sets: 4, reps: 12, weight: 33.75, step: 3.75 },
-      { id: "crunch_c", name: "Cable Crunches", sets: 4, reps: 15, weight: 32.5, step: 3.75 },
+      { slot: "bench_c", sets: 4, defaultAlt: 0, alts: [
+        { id: "bench_c", name: "Bench Press", reps: 10, weight: 60, step: 2.5 },
+      ]},
+      { slot: "shpress_c", sets: 4, defaultAlt: 0, alts: [
+        { id: "shpress_c", name: "Shoulder Press", reps: 12, weight: 33.75, step: 3.75 },
+      ]},
+      { slot: "crunch_c", sets: 4, defaultAlt: 0, alts: [
+        { id: "crunch_c", name: "Cable Crunches", reps: 15, weight: 32.5, step: 3.75 },
+      ]},
       {
         slot: "pull_c", sets: 4, defaultAlt: 2,
         alts: [
@@ -80,13 +98,17 @@ const PROGRAM = {
     ],
   },
 };
+Object.freeze(PROGRAM);
 
 // Resolve a slot definition → flat exercise object using current subs state
-function resolveEx(exDef, subs) {
-  if (!exDef.alts) return exDef;
-  const altIdx = subs[exDef.slot] ?? exDef.defaultAlt;
-  const alt = exDef.alts[altIdx] || exDef.alts[0];
-  return { ...alt, sets: exDef.sets, slot: exDef.slot, altIdx, alts: exDef.alts, defaultAlt: exDef.defaultAlt };
+function resolveEx(exDef, subs, customAlts = {}) {
+  const allAlts = [...exDef.alts, ...(customAlts[exDef.slot] || [])];
+  const selected = subs[exDef.slot];
+  let alt;
+  if (typeof selected === 'number') alt = exDef.alts[selected] || allAlts[0];
+  else if (typeof selected === 'string') alt = allAlts.find((a) => a.id === selected) || allAlts[0];
+  else alt = allAlts[exDef.defaultAlt] || allAlts[0];
+  return { ...alt, sets: exDef.sets, slot: exDef.slot, allAlts, defaultAlt: exDef.defaultAlt };
 }
 
 // Collect all concrete weighted exercises (for steps defaults)
@@ -94,15 +116,10 @@ function getAllWeighted() {
   const all = [];
   Object.values(PROGRAM).forEach((d) =>
     d.exercises.forEach((exDef) => {
-      if (exDef.alts) {
-        exDef.alts.forEach((alt) => {
-          if (alt.weight !== null && alt.step !== null && !all.find((x) => x.id === alt.id))
-            all.push({ ...alt, sets: exDef.sets });
-        });
-      } else {
-        if (exDef.weight !== null && exDef.step !== null && !all.find((x) => x.id === exDef.id))
-          all.push(exDef);
-      }
+      exDef.alts.forEach((alt) => {
+        if (alt.weight !== null && alt.step !== null && !all.find((x) => x.id === alt.id))
+          all.push({ ...alt, sets: exDef.sets });
+      });
     })
   );
   return all;
@@ -111,6 +128,15 @@ function getAllWeighted() {
 const ALL_WEIGHTED = getAllWeighted();
 const DEFAULT_STEPS = Object.fromEntries(
   ALL_WEIGHTED.map((e) => [e.id, { step: e.step, progressReps: e.progressReps ?? e.reps }])
+);
+
+const ALL_EXERCISES = [];
+Object.values(PROGRAM).forEach((d) =>
+  d.exercises.forEach((exDef) => {
+    exDef.alts.forEach((alt) => {
+      if (!ALL_EXERCISES.find((e) => e.name === alt.name)) ALL_EXERCISES.push(alt);
+    });
+  })
 );
 
 const DEFAULT_SUBS = {};
@@ -123,11 +149,7 @@ Object.values(PROGRAM).forEach((d) =>
 const DEFAULT_WEIGHTS = {};
 Object.values(PROGRAM).forEach((d) =>
   d.exercises.forEach((exDef) => {
-    if (exDef.alts) {
-      exDef.alts.forEach((alt) => { if (alt.weight !== null) DEFAULT_WEIGHTS[alt.id] = alt.weight; });
-    } else {
-      if (exDef.weight !== null) DEFAULT_WEIGHTS[exDef.id] = exDef.weight;
-    }
+    exDef.alts.forEach((alt) => { if (alt.weight !== null) DEFAULT_WEIGHTS[alt.id] = alt.weight; });
   })
 );
 
@@ -135,6 +157,7 @@ const DEFAULT_STATE = {
   weights: DEFAULT_WEIGHTS,
   steps: DEFAULT_STEPS,
   subs: DEFAULT_SUBS,
+  customAlts: {},
   history: [],
 };
 
@@ -273,6 +296,7 @@ function App() {
           ...DEFAULT_STATE, ...stored,
           steps: { ...DEFAULT_STEPS, ...(stored.steps || {}) },
           subs: { ...DEFAULT_SUBS, ...(stored.subs || {}) },
+          customAlts: stored.customAlts || {},
           weights: { ...DEFAULT_WEIGHTS, ...(stored.weights || {}) },
         });
       }
@@ -293,12 +317,12 @@ function App() {
     setTimeout(() => setToast(null), 3500);
   }
 
-  function getDayExercises(dayKey, subs) {
-    return PROGRAM[dayKey].exercises.map((exDef) => resolveEx(exDef, subs));
+  function getDayExercises(dayKey, subs, customAlts = {}) {
+    return PROGRAM[dayKey].exercises.map((exDef) => resolveEx(exDef, subs, customAlts));
   }
 
   function startDay(dayKey) {
-    const exercises = getDayExercises(dayKey, state.subs);
+    const exercises = getDayExercises(dayKey, state.subs, state.customAlts);
     setActiveDay(dayKey);
     setSession(exercises.map((ex) => ({
       exId: ex.id,
@@ -312,13 +336,12 @@ function App() {
     setView("workout");
   }
 
-  function swapExercise(exIdx, newAltIdx) {
+  function swapExercise(exIdx, newAltId) {
     const exDef = PROGRAM[activeDay].exercises[exIdx];
-    if (!exDef.alts) return;
-    const newSubs = { ...state.subs, [exDef.slot]: newAltIdx };
-    setState((prev) => ({ ...prev, subs: newSubs }));
+    const allAlts = [...exDef.alts, ...(state.customAlts[exDef.slot] || [])];
+    const newAlt = allAlts.find((a) => a.id === newAltId) || allAlts[0];
+    setState((prev) => ({ ...prev, subs: { ...prev.subs, [exDef.slot]: newAltId } }));
 
-    const newAlt = exDef.alts[newAltIdx];
     const resolved = { ...newAlt, sets: exDef.sets };
     setSession((s) => s.map((ex, i) => {
       if (i !== exIdx) return ex;
@@ -328,6 +351,65 @@ function App() {
         sets: Array.from({ length: resolved.sets }, () => ({
           done: false,
           reps: resolved.reps === "max" ? "" : resolved.reps,
+        })),
+      };
+    }));
+  }
+
+  function addCustomAlt(exIdx, name) {
+    const exDef = PROGRAM[activeDay].exercises[exIdx];
+    const currentEx = resolveEx(exDef, state.subs, state.customAlts);
+    const sessionEx = session[exIdx];
+    const newId = "custom_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+    const newAlt = {
+      id: newId, name,
+      reps: currentEx.reps === "max" ? "max" : currentEx.reps,
+      weight: sessionEx.weight,
+      step: state.steps[currentEx.id]?.step || currentEx.step,
+      progressReps: currentEx.progressReps,
+    };
+    setState((prev) => ({
+      ...prev,
+      customAlts: { ...prev.customAlts, [exDef.slot]: [...(prev.customAlts[exDef.slot] || []), newAlt] },
+      subs: { ...prev.subs, [exDef.slot]: newId },
+    }));
+    setSession((s) => s.map((ex, i) => {
+      if (i !== exIdx) return ex;
+      return {
+        exId: newId, slot: exDef.slot, weight: sessionEx.weight,
+        sets: Array.from({ length: exDef.sets }, () => ({
+          done: false, reps: newAlt.reps === "max" ? "" : newAlt.reps,
+        })),
+      };
+    }));
+  }
+
+  function removeCustomAlt(slot, altId) {
+    setState((prev) => {
+      const newCustomAlts = { ...prev.customAlts };
+      newCustomAlts[slot] = (newCustomAlts[slot] || []).filter((a) => a.id !== altId);
+      if (newCustomAlts[slot].length === 0) delete newCustomAlts[slot];
+      const newSubs = { ...prev.subs };
+      if (newSubs[slot] === altId) delete newSubs[slot];
+      return { ...prev, customAlts: newCustomAlts, subs: newSubs };
+    });
+  }
+
+  function adoptExercise(exIdx, ex) {
+    const exDef = PROGRAM[activeDay].exercises[exIdx];
+    const altEntry = { id: ex.id, name: ex.name, reps: ex.reps, weight: ex.weight, step: ex.step, progressReps: ex.progressReps };
+    setState((prev) => ({
+      ...prev,
+      customAlts: { ...prev.customAlts, [exDef.slot]: [...(prev.customAlts[exDef.slot] || []).filter((a) => a.id !== ex.id), altEntry] },
+      subs: { ...prev.subs, [exDef.slot]: ex.id },
+    }));
+    setSession((s) => s.map((sessionEx, i) => {
+      if (i !== exIdx) return sessionEx;
+      return {
+        exId: ex.id, slot: exDef.slot,
+        weight: state.weights[ex.id] ?? ex.weight,
+        sets: Array.from({ length: exDef.sets }, () => ({
+          done: false, reps: ex.reps === "max" ? "" : ex.reps,
         })),
       };
     }));
@@ -355,13 +437,13 @@ function App() {
   }
 
   function finishWorkout() {
-    const exercises = getDayExercises(activeDay, state.subs);
+    const exercises = getDayExercises(activeDay, state.subs, state.customAlts);
     const newWeights = { ...state.weights };
     const changes = [];
 
     session.forEach((exSession, i) => {
-      const ex = exercises[i];
-      if (ex.weight === null || ex.step === null) return;
+      const ex = exercises.find((e) => e.id === exSession.exId) || exercises[i];
+      if (!ex || ex.weight === null || ex.step === null) return;
       const cfg = state.steps[ex.id] || { step: ex.step, progressReps: ex.progressReps ?? ex.reps };
       const threshold = Number(cfg.progressReps ?? ex.reps);
       const allDone = exSession.sets.every((s) => s.done && Number(s.reps) >= threshold);
@@ -375,14 +457,15 @@ function App() {
       date: new Date().toISOString(),
       dateStr: new Date().toLocaleDateString("ru-RU"),
       day: activeDay, label: PROGRAM[activeDay].label,
-      exercises: session.map((ex, i) => ({
-        name: exercises[i].name, weight: ex.weight, sets: ex.sets,
-      })),
+      exercises: session.map((exSes, i) => {
+        const exDef = exercises.find((e) => e.id === exSes.exId) || exercises[i];
+        return { name: exDef?.name || exSes.exId, weight: exSes.weight, sets: exSes.sets };
+      }),
     };
 
     setState((prev) => ({
       ...prev, weights: newWeights,
-      history: [record, ...prev.history].slice(0, 80),
+      history: [record, ...prev.history].slice(0, 200),
     }));
 
     if (changes.length) {
@@ -446,7 +529,7 @@ function App() {
       )}
 
       {view === "home" && <HomeView state={state} onStart={startDay} onHistory={() => setView("history")} onSettings={() => setView("settings")} onReset={() => setConfirmReset(true)} />}
-      {view === "workout" && session && <WorkoutView dayKey={activeDay} day={PROGRAM[activeDay]} session={session} state={state} onToggle={toggleSet} onReps={updateReps} onWeight={updateSessionWeight} onSwap={swapExercise} onFinish={finishWorkout} onBack={() => { setView("home"); setSession(null); setActiveDay(null); }} />}
+      {view === "workout" && session && <WorkoutView dayKey={activeDay} day={PROGRAM[activeDay]} session={session} state={state} onToggle={toggleSet} onReps={updateReps} onWeight={updateSessionWeight} onSwap={swapExercise} onAddAlt={addCustomAlt} onRemoveAlt={removeCustomAlt} onAdopt={adoptExercise} onFinish={finishWorkout} onBack={() => { setView("home"); setSession(null); setActiveDay(null); }} />}
       {view === "history" && <HistoryView history={state.history} onExport={handleExport} onBack={() => setView("home")} />}
       {view === "settings" && <SettingsView state={state} onUpdate={updateStepCfg} onUpdateWeight={updateWeight} onBack={() => setView("home")} />}
     </div>
@@ -504,7 +587,7 @@ function HomeView({ state, onStart, onHistory, onSettings, onReset }) {
 
 function DayCard({ dayKey, day, state, onStart }) {
   const accent = ACCENT[dayKey];
-  const exercises = day.exercises.map((exDef) => resolveEx(exDef, state.subs));
+  const exercises = day.exercises.map((exDef) => resolveEx(exDef, state.subs, state.customAlts));
   return (
     <div onClick={() => onStart(dayKey)} style={{ ...S.card, padding: 0, cursor: "pointer", overflow: "hidden", borderLeft: `3px solid ${accent}` }}>
       <div style={{ padding: "16px 18px" }}>
@@ -520,7 +603,7 @@ function DayCard({ dayKey, day, state, onStart }) {
               <div key={ex.id} style={{ background: "#18181b", borderRadius: 6, padding: "4px 10px", display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 11, color: "#666" }}>{ex.name}</span>
                 {w != null && <span style={{ fontSize: 11, color: accent, fontWeight: 700 }}>{w}</span>}
-                {ex.alts && <span style={{ fontSize: 9, color: "#444" }}>⇄</span>}
+                {ex.allAlts && ex.allAlts.length > 1 && <span style={{ fontSize: 9, color: "#444" }}>⇄</span>}
               </div>
             );
           })}
@@ -540,13 +623,15 @@ function StatBox({ label, value, accent: color }) {
 }
 
 // ── WORKOUT ──────────────────────────────────────────────────────────────────
-function WorkoutView({ dayKey, day, session, state, onToggle, onReps, onWeight, onSwap, onFinish, onBack }) {
+function WorkoutView({ dayKey, day, session, state, onToggle, onReps, onWeight, onSwap, onAddAlt, onRemoveAlt, onAdopt, onFinish, onBack }) {
   const accent = ACCENT[dayKey];
   const total = session.reduce((s, ex) => s + ex.sets.length, 0);
   const done = session.reduce((s, ex) => s + ex.sets.filter((st) => st.done).length, 0);
   const pct = total > 0 ? done / total : 0;
-  const exercises = day.exercises.map((exDef) => resolveEx(exDef, state.subs));
+  const exercises = day.exercises.map((exDef) => resolveEx(exDef, state.subs, state.customAlts));
   const [swapOpen, setSwapOpen] = useState(null);
+  const [addingAlt, setAddingAlt] = useState(null);
+  const [newAltName, setNewAltName] = useState("");
   const timerRef = useRef(null);
 
   function handleToggle(exIdx, setIdx) {
@@ -580,7 +665,7 @@ function WorkoutView({ dayKey, day, session, state, onToggle, onReps, onWeight, 
           const isMax = ex.reps === "max";
           const allDone = exSession.sets.every((s) => s.done);
           const hasWeight = exSession.weight != null;
-          const hasAlts = !!exDef.alts;
+          const allAlts = [...exDef.alts, ...(state.customAlts?.[exDef.slot] || [])];
 
           return (
             <div key={exIdx} style={{
@@ -595,15 +680,13 @@ function WorkoutView({ dayKey, day, session, state, onToggle, onReps, onWeight, 
                   <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: 1, color: allDone ? accent : "#fff", transition: "color 0.3s", flex: 1 }}>
                     {ex.name}
                   </div>
-                  {hasAlts && (
-                    <button onClick={() => setSwapOpen(swapOpen === exIdx ? null : exIdx)} style={{
-                      background: swapOpen === exIdx ? accent + "20" : "#18181b",
-                      border: `1px solid ${swapOpen === exIdx ? accent + "44" : "#2a2a2e"}`,
-                      color: swapOpen === exIdx ? accent : "#555",
-                      borderRadius: 6, padding: "3px 8px", cursor: "pointer",
-                      fontSize: 11, fontFamily: "inherit", fontWeight: 600,
-                    }}>⇄</button>
-                  )}
+                  <button onClick={() => { setSwapOpen(swapOpen === exIdx ? null : exIdx); setAddingAlt(null); }} style={{
+                    background: swapOpen === exIdx ? accent + "20" : "#18181b",
+                    border: `1px solid ${swapOpen === exIdx ? accent + "44" : "#2a2a2e"}`,
+                    color: swapOpen === exIdx ? accent : "#555",
+                    borderRadius: 6, padding: "3px 8px", cursor: "pointer",
+                    fontSize: 11, fontFamily: "inherit", fontWeight: 600,
+                  }}>⇄</button>
                   {hasWeight && (
                     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <button style={S.weightBtn} onClick={() => onWeight(exIdx, -1)}>−</button>
@@ -622,25 +705,62 @@ function WorkoutView({ dayKey, day, session, state, onToggle, onReps, onWeight, 
               </div>
 
               {/* Swap picker */}
-              {hasAlts && swapOpen === exIdx && (
+              {swapOpen === exIdx && (() => {
+                const customIds = (state.customAlts?.[exDef.slot] || []);
+                const isInCustom = (id) => customIds.some((a) => a.id === id);
+                const otherExercises = ALL_EXERCISES.filter((e) => !allAlts.find((a) => a.name === e.name));
+                return (
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14, padding: "10px 12px", background: "#0c0c0e", borderRadius: 8, border: "1px solid #1e1e22" }}>
-                  {exDef.alts.map((alt, altIdx) => {
+                  {allAlts.map((alt) => {
                     const active = ex.id === alt.id;
+                    const removable = isInCustom(alt.id) && !active;
                     return (
-                      <button key={alt.id} onClick={() => { onSwap(exIdx, altIdx); setSwapOpen(null); }}
-                        style={{
-                          padding: "8px 14px", borderRadius: 8, cursor: "pointer",
-                          background: active ? accent + "20" : "#18181b",
-                          border: `1px solid ${active ? accent : "#2a2a2e"}`,
-                          color: active ? accent : "#888",
-                          fontSize: 13, fontWeight: 600, fontFamily: "inherit",
-                        }}>
-                        {alt.name}
-                      </button>
+                      <div key={alt.id} style={{ display: "flex", alignItems: "center" }}>
+                        <button onClick={() => { onSwap(exIdx, alt.id); setSwapOpen(null); setAddingAlt(null); }}
+                          style={{
+                            padding: "8px 14px", borderRadius: removable ? "8px 0 0 8px" : 8, cursor: "pointer",
+                            background: active ? accent + "20" : "#18181b",
+                            border: `1px solid ${active ? accent : "#2a2a2e"}`,
+                            color: active ? accent : "#888",
+                            fontSize: 13, fontWeight: 600, fontFamily: "inherit",
+                          }}>
+                          {alt.name}
+                        </button>
+                        {removable && (
+                          <button onClick={() => onRemoveAlt(exDef.slot, alt.id)}
+                            style={{ background: "#18181b", border: "1px solid #2a2a2e", borderLeft: "none", color: "#444", borderRadius: "0 8px 8px 0", padding: "8px 8px", cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>×</button>
+                        )}
+                      </div>
                     );
                   })}
+
+                  {otherExercises.length > 0 && (
+                    <>
+                      <div style={{ width: "100%", borderTop: "1px solid #1e1e22", marginTop: 2, paddingTop: 8 }}>
+                        <div style={{ fontSize: 9, color: "#555", letterSpacing: 2, fontWeight: 600 }}>ALL EXERCISES</div>
+                      </div>
+                      {otherExercises.map((other) => (
+                        <button key={other.id} onClick={() => { onAdopt(exIdx, other); setSwapOpen(null); setAddingAlt(null); }}
+                          style={{ padding: "6px 10px", borderRadius: 6, cursor: "pointer", background: "#18181b", border: "1px solid #1e1e22", color: "#555", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }}>
+                          {other.name}
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {addingAlt === exIdx ? (
+                    <form onSubmit={(e) => { e.preventDefault(); if (newAltName.trim()) { onAddAlt(exIdx, newAltName.trim()); setAddingAlt(null); setNewAltName(""); setSwapOpen(null); }}} style={{ display: "flex", gap: 6, width: "100%", marginTop: 4 }}>
+                      <input value={newAltName} onChange={(e) => setNewAltName(e.target.value)} placeholder="Exercise name"
+                        autoFocus style={{ flex: 1, background: "#18181b", border: "1px solid #2a2a2e", color: "#ccc", padding: "8px 12px", borderRadius: 8, fontSize: 16, fontFamily: "inherit", outline: "none" }} />
+                      <button type="submit" style={{ background: accent + "20", border: `1px solid ${accent}`, color: accent, borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>OK</button>
+                    </form>
+                  ) : (
+                    <button onClick={() => { setAddingAlt(exIdx); setNewAltName(""); }}
+                      style={{ padding: "8px 14px", borderRadius: 8, cursor: "pointer", background: "#18181b", border: "1px dashed #2a2a2e", color: "#555", fontSize: 13, fontWeight: 600, fontFamily: "inherit" }}>+</button>
+                  )}
                 </div>
-              )}
+                );
+              })()}
 
               {/* Sets */}
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -717,10 +837,10 @@ function SettingsView({ state, onUpdate, onUpdateWeight, onBack }) {
   const byDay = {};
   Object.entries(PROGRAM).forEach(([key, day]) => {
     day.exercises.forEach((exDef) => {
-      const list = exDef.alts
-        ? exDef.alts.filter((a) => a.weight !== null && a.step !== null)
-        : (exDef.weight !== null && exDef.step !== null ? [exDef] : []);
-      list.forEach((ex) => {
+      const list = exDef.alts.filter((a) => a.weight !== null && a.step !== null);
+      // Include custom alts for this slot
+      const custom = (state.customAlts?.[exDef.slot] || []).filter((a) => a.weight !== null && a.step !== null);
+      [...list, ...custom].forEach((ex) => {
         if (!byDay[key]) byDay[key] = { label: day.label, exercises: [] };
         if (!byDay[key].exercises.find((e) => e.id === ex.id)) byDay[key].exercises.push(ex);
       });
@@ -776,7 +896,7 @@ function NumField({ label, value, hint, onChange, accent = "#22c55e" }) {
       <div style={{ fontSize: 9, color: "#444", letterSpacing: 2, marginBottom: 6, fontWeight: 600 }}>{label}</div>
       <input type="number" inputMode="decimal" value={local} step="0.5"
         onChange={(e) => setLocal(e.target.value)} onBlur={() => onChange(local)}
-        style={{ width: "100%", background: "#18181b", border: "1px solid #2a2a2e", color: accent, padding: "10px 12px", borderRadius: 8, fontFamily: "monospace", fontSize: 15, fontWeight: 700 }}
+        style={{ width: "100%", background: "#18181b", border: "1px solid #2a2a2e", color: accent, padding: "10px 12px", borderRadius: 8, fontFamily: "monospace", fontSize: 16, fontWeight: 700 }}
       />
       <div style={{ fontSize: 9, color: "#333", marginTop: 4 }}>{hint}</div>
     </div>
@@ -839,7 +959,7 @@ function getStreak(history) {
   const now = new Date();
   for (let i = 0; i < history.length; i++) {
     const d = new Date(history[i].date);
-    if (isNaN(d.getTime())) { count++; continue; }
+    if (isNaN(d.getTime())) continue;
     const diff = Math.floor((now - d) / 86400000);
     if (diff <= count + 2) count++;
     else break;

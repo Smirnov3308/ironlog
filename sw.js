@@ -1,8 +1,11 @@
-const CACHE_NAME = 'ironlog-v10';
+const CACHE_NAME = 'ironlog-v12';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js',
 ];
 
 self.addEventListener('install', (e) => {
@@ -22,14 +25,22 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Network-first for HTML, cache-first for assets
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request).catch(() => caches.match('./index.html'))
     );
   } else {
     e.respondWith(
-      caches.match(e.request).then((r) => r || fetch(e.request))
+      caches.match(e.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(e.request).then((resp) => {
+          if (resp && (resp.ok || resp.type === 'opaque')) {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
+          }
+          return resp;
+        });
+      })
     );
   }
 });
