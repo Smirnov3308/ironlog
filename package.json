@@ -1,0 +1,14 @@
+{
+  "name": "ironlog",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hypertrophy workout tracker with linear progression",
+  "scripts": {
+    "build": "babel app.jsx --out-file app.js --presets=@babel/preset-react"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.24.0",
+    "@babel/core": "^7.24.0",
+    "@babel/preset-react": "^7.24.0"
+  }
+}

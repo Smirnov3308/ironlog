@@ -1,11 +1,11 @@
-const CACHE_NAME = 'ironlog-v12';
+const CACHE_NAME = 'ironlog-v14';
 const ASSETS = [
   './',
   './index.html',
+  './app.js',
   './manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js',
 ];
 
 self.addEventListener('install', (e) => {
@@ -36,7 +36,7 @@ self.addEventListener('fetch', (e) => {
         return fetch(e.request).then((resp) => {
           if (resp && (resp.ok || resp.type === 'opaque')) {
             const clone = resp.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
+            e.waitUntil(caches.open(CACHE_NAME).then((c) => c.put(e.request, clone)));
           }
           return resp;
         });
